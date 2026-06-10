@@ -1,0 +1,56 @@
+from __future__ import annotations
+
+from datetime import datetime
+
+from app.constants import COINS_BY_ID
+
+
+def _format_number(value: float, decimals: int) -> str:
+    text = f"{value:,.{decimals}f}".replace(",", " ")
+    return text
+
+
+def format_price(price: float | None, currency: str, symbol: str) -> str:
+    if price is None:
+        return "н/д"
+
+    if currency == "rub":
+        if price >= 1000:
+            return f"{_format_number(price, 0)} ₽"
+        return f"{_format_number(price, 2)} ₽"
+
+    if symbol in {"BTC", "ETH"} or price >= 1:
+        return f"${_format_number(price, 2)}"
+    return f"${_format_number(price, 4)}"
+
+
+def format_percent(value: float | None) -> str:
+    if value is None:
+        return "н/д"
+    if abs(value) < 0.1:
+        return f"{value:+.2f}%"
+    return f"{value:+.1f}%"
+
+
+def build_prices_message(coin_ids: list[str], prices: dict, currency: str, title: str = "📊 Курс сейчас") -> str:
+    lines = [title, ""]
+    for coin_id in coin_ids:
+        coin = COINS_BY_ID.get(coin_id)
+        if not coin:
+            continue
+        values = prices.get(coin_id, {})
+        price = values.get(currency)
+        change = values.get(f"{currency}_24h_change")
+        lines.append(
+            f"{coin.emoji} {coin.symbol}: {format_price(price, currency, coin.symbol)} | "
+            f"{format_percent(change)} за 24ч"
+        )
+
+    lines.extend(
+        [
+            "",
+            f"Валюта: {currency.upper()}",
+            f"Обновлено: {datetime.now().strftime('%H:%M')}",
+        ]
+    )
+    return "\n".join(lines)
