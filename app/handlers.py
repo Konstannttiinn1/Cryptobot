@@ -26,11 +26,18 @@ router = Router()
 _config: Config | None = None
 
 START_TEXT = "Привет! Я могу присылать актуальный курс выбранных криптовалют."
-COINS_TEXT = "🪙 Выберите монеты для отслеживания:"
 CURRENCY_TEXT = "💱 Выберите валюту отображения:"
 INTERVAL_TEXT = "⏱ Как часто присылать уведомления?"
 NO_COINS_TEXT = "Вы пока не выбрали монеты. Откройте раздел «Выбрать монеты»."
 API_ERROR_TEXT = "Не удалось получить курс. Попробуйте позже."
+MAX_SELECTED_COINS_ALERT = "Можно выбрать максимум {limit} монет."
+
+
+def build_coins_text(selected_count: int) -> str:
+    return (
+        "🪙 Выберите монеты для отслеживания:\n\n"
+        f"Выбрано: {selected_count}/{get_config().max_selected_coins}"
+    )
 
 
 def setup_router(config: Config) -> Router:
@@ -76,15 +83,24 @@ async def show_main_menu(callback: CallbackQuery) -> None:
 @router.callback_query(F.data == "menu:coins")
 async def show_coins_menu(callback: CallbackQuery) -> None:
     coins = await db.get_user_coins(callback.from_user.id)
-    await safe_edit(callback, COINS_TEXT, reply_markup=coins_keyboard(coins))
+    await safe_edit(callback, build_coins_text(len(coins)), reply_markup=coins_keyboard(coins))
     await callback.answer()
 
 
 @router.callback_query(F.data.startswith("coin:"))
 async def toggle_coin(callback: CallbackQuery) -> None:
     coin_id = callback.data.split(":", 1)[1] if callback.data else ""
+    selected = await db.get_user_coins(callback.from_user.id)
+
+    if coin_id not in selected and len(selected) >= get_config().max_selected_coins:
+        await callback.answer(
+            MAX_SELECTED_COINS_ALERT.format(limit=get_config().max_selected_coins),
+            show_alert=True,
+        )
+        return
+
     selected = await db.toggle_user_coin(callback.from_user.id, coin_id)
-    await safe_edit(callback, COINS_TEXT, reply_markup=coins_keyboard(selected))
+    await safe_edit(callback, build_coins_text(len(selected)), reply_markup=coins_keyboard(selected))
     await callback.answer()
 
 
