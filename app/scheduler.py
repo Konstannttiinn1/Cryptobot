@@ -35,19 +35,36 @@ async def send_due_notifications(bot: Bot, config: Config) -> None:
     if not users:
         return
 
+    user_coin_ids: dict[int, list[str]] = {}
+    all_coin_ids: set[str] = set()
     for user in users:
         user_id = user["user_id"]
         coin_ids = await db.get_user_coins(user_id)
         if not coin_ids:
             logger.info("Skip notification for %s: no selected coins", user_id)
             continue
+        user_coin_ids[user_id] = coin_ids
+        all_coin_ids.update(coin_ids)
 
+    prices: dict = {}
+    fetch_failed = False
+    if all_coin_ids:
         try:
-            prices = await fetch_prices(coin_ids, config)
+            prices = await fetch_prices(sorted(all_coin_ids), config)
             await db.upsert_prices_cache(prices)
-            text = build_prices_message(coin_ids, prices, user["currency"], title="📊 Обновление курса")
         except CryptoAPIError:
+            fetch_failed = True
+
+    for user in users:
+        user_id = user["user_id"]
+        coin_ids = user_coin_ids.get(user_id)
+        if not coin_ids:
+            continue
+
+        if fetch_failed:
             text = API_ERROR_TEXT
+        else:
+            text = build_prices_message(coin_ids, prices, user["currency"], title="📊 Обновление курса")
 
         try:
             await bot.send_message(user_id, text)

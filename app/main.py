@@ -5,6 +5,7 @@ import logging
 
 from aiogram import Bot, Dispatcher
 from aiogram.enums import ParseMode
+from aiogram.types import BotCommand
 from aiogram.client.default import DefaultBotProperties
 
 from app.config import get_config
@@ -26,6 +27,17 @@ async def main() -> None:
         token=config.bot_token,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
     )
+    await bot.set_my_commands(
+        [
+            BotCommand(command="start", description="Главное меню"),
+            BotCommand(command="menu", description="Открыть меню"),
+            BotCommand(command="price", description="Курс сейчас"),
+            BotCommand(command="coins", description="Выбрать монеты"),
+            BotCommand(command="settings", description="Настройки"),
+            BotCommand(command="stop", description="Остановить уведомления"),
+        ]
+    )
+
     dispatcher = Dispatcher()
     dispatcher.include_router(setup_router(config))
 
