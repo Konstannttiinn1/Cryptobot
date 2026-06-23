@@ -26,3 +26,6 @@ COINS_BY_ID = {coin.coin_id: coin for coin in AVAILABLE_COINS}
 DEFAULT_COIN_IDS = ("bitcoin", "the-open-network", "tether")
 SUPPORTED_CURRENCIES = ("rub", "usd")
 SUPPORTED_INTERVALS = (5, 10, 15, 30, 60)
+MAX_SELECTED_COINS = 20
+MAX_MESSAGE_LENGTH = 3900
+TRUNCATED_MESSAGE_NOTICE = "Часть монет не показана из-за ограничения длины сообщения."
