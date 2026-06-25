@@ -9,8 +9,7 @@ MAIN_REPLY_BUTTONS = {
     "prices": "📊 Курс сейчас",
     "coins": "🪙 Выбрать монеты",
     "currency": "💱 Валюта",
-    "interval": "⏱ Интервал",
-    "notifications": "🔔 Уведомления",
+    "notifications": "⏱ Уведомления",
     "support": "🆘 Поддержка",
 }
 
@@ -20,9 +19,7 @@ def main_menu() -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text="📊 Курс сейчас", callback_data="prices:now")],
         [InlineKeyboardButton(text="🪙 Выбрать монеты", callback_data="coins:page:1")],
         [InlineKeyboardButton(text="💱 Валюта", callback_data="menu:currency")],
-        [InlineKeyboardButton(text="⏱ Интервал уведомлений", callback_data="menu:interval")],
-        [InlineKeyboardButton(text="🔔 Включить уведомления", callback_data="notifications:on")],
-        [InlineKeyboardButton(text="🔕 Остановить уведомления", callback_data="notifications:off")],
+        [InlineKeyboardButton(text="⏱ Уведомления", callback_data="menu:interval")],
         [InlineKeyboardButton(text="🆘 Поддержка", callback_data="support")],
     ]
     return InlineKeyboardMarkup(inline_keyboard=rows)
@@ -32,11 +29,11 @@ def main_reply_keyboard() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text=MAIN_REPLY_BUTTONS["prices"]), KeyboardButton(text=MAIN_REPLY_BUTTONS["coins"])],
-            [KeyboardButton(text=MAIN_REPLY_BUTTONS["currency"]), KeyboardButton(text=MAIN_REPLY_BUTTONS["interval"])],
-            [KeyboardButton(text=MAIN_REPLY_BUTTONS["notifications"]), KeyboardButton(text=MAIN_REPLY_BUTTONS["support"])],
+            [KeyboardButton(text=MAIN_REPLY_BUTTONS["currency"]), KeyboardButton(text=MAIN_REPLY_BUTTONS["notifications"])],
+            [KeyboardButton(text=MAIN_REPLY_BUTTONS["support"])],
         ],
         resize_keyboard=True,
-        is_persistent=True,
+        is_persistent=False,
     )
 
 
@@ -135,18 +132,9 @@ def interval_keyboard(selected_minutes: int) -> InlineKeyboardMarkup:
         ]
         for minutes in SUPPORTED_INTERVALS
     ]
+    rows.append([InlineKeyboardButton(text="🚫 Не присылать уведомления", callback_data="notifications:off")])
     rows.append([InlineKeyboardButton(text="⬅️ Назад", callback_data="menu:main")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
-
-
-def notifications_keyboard() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text="🔔 Включить уведомления", callback_data="notifications:on")],
-            [InlineKeyboardButton(text="🔕 Остановить уведомления", callback_data="notifications:off")],
-            [InlineKeyboardButton(text="⬅️ В меню", callback_data="menu:main")],
-        ]
-    )
 
 
 def support_url_keyboard(url: str) -> InlineKeyboardMarkup:

@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timezone
 
 from aiogram import F, Router
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 
 from app import database as db
 from app.config import Config
@@ -22,7 +23,6 @@ from app.keyboards import (
     interval_keyboard,
     main_menu,
     main_reply_keyboard,
-    notifications_keyboard,
     search_results_keyboard,
     support_url_keyboard,
     total_coin_pages,
@@ -37,13 +37,15 @@ _last_search_queries: dict[int, str] = {}
 START_TEXT = "Привет! Я могу присылать актуальный курс выбранных криптовалют."
 CURRENCY_TEXT = "💱 Выберите валюту отображения:"
 INTERVAL_TEXT = "⏱ Как часто присылать уведомления?"
-NOTIFICATIONS_TEXT = "🔔 Управление уведомлениями:"
+NOTIFICATIONS_TEXT = "⏱ Выберите интервал уведомлений. После выбора интервала уведомления включатся автоматически."
 NO_COINS_TEXT = "Вы пока не выбрали монеты. Откройте раздел «Выбрать монеты»."
 API_ERROR_TEXT = "Не удалось получить курс. Попробуйте позже."
 SEARCH_PROMPT_TEXT = "Введите название или тикер монеты. Например: BTC, TON, Ethereum"
 SEARCH_RESULTS_TEXT = "🔎 Результаты поиска:"
 SEARCH_NOT_FOUND_TEXT = "Ничего не найдено. Попробуйте другой тикер или название."
 MAX_SELECTED_COINS_ALERT = "Можно выбрать максимум {limit} монет."
+MANUAL_PRICE_COOLDOWN_SECONDS = 60
+PRICE_COOLDOWN_TEXT = "⏳ Курс сейчас можно запрашивать не чаще одного раза в минуту. Попробуйте через {seconds} сек."
 
 
 class CoinSearch(StatesGroup):
@@ -104,8 +106,26 @@ async def show_main_menu_message(message: Message) -> None:
     await message.answer("Главное меню:", reply_markup=main_menu())
 
 
+async def check_manual_price_cooldown(user_id: int) -> int:
+    settings = await db.get_user_settings(user_id)
+    last_requested_at = settings.get("last_manual_price_at") if settings else None
+    if not last_requested_at:
+        return 0
+    try:
+        last_requested = datetime.fromisoformat(last_requested_at)
+    except ValueError:
+        return 0
+    elapsed = (datetime.now(timezone.utc) - last_requested).total_seconds()
+    remaining = MANUAL_PRICE_COOLDOWN_SECONDS - int(elapsed)
+    return max(0, remaining)
+
+
 async def show_prices_message(message: Message) -> None:
     if not message.from_user:
+        return
+    cooldown_seconds = await check_manual_price_cooldown(message.from_user.id)
+    if cooldown_seconds > 0:
+        await message.answer(PRICE_COOLDOWN_TEXT.format(seconds=cooldown_seconds), reply_markup=main_reply_keyboard())
         return
     coin_ids = await db.get_user_coins(message.from_user.id)
     if not coin_ids:
@@ -120,6 +140,7 @@ async def show_prices_message(message: Message) -> None:
         await message.answer(API_ERROR_TEXT, reply_markup=main_reply_keyboard())
         return
 
+    await db.update_last_manual_price_at(message.from_user.id)
     text = build_prices_message(coin_ids, prices, settings["currency"])
     await message.answer(text, reply_markup=main_reply_keyboard())
 
@@ -182,6 +203,15 @@ async def settings_command(message: Message, state: FSMContext) -> None:
     await show_settings_message(message)
 
 
+@router.message(Command("hide"))
+async def hide_command(message: Message, state: FSMContext) -> None:
+    await state.clear()
+    await message.answer(
+        "Клавиатура скрыта. Чтобы открыть меню снова, напишите /menu.",
+        reply_markup=ReplyKeyboardRemove(),
+    )
+
+
 @router.message(Command("stop"))
 async def stop_command(message: Message, state: FSMContext) -> None:
     await state.clear()
@@ -210,17 +240,11 @@ async def currency_reply(message: Message, state: FSMContext) -> None:
     await message.answer(CURRENCY_TEXT, reply_markup=currency_keyboard(settings["currency"]))
 
 
-@router.message(F.text == MAIN_REPLY_BUTTONS["interval"])
-async def interval_reply(message: Message, state: FSMContext) -> None:
-    await state.clear()
-    settings = await db.get_user_settings(message.from_user.id)
-    await message.answer(INTERVAL_TEXT, reply_markup=interval_keyboard(settings["interval_minutes"]))
-
-
 @router.message(F.text == MAIN_REPLY_BUTTONS["notifications"])
 async def notifications_reply(message: Message, state: FSMContext) -> None:
     await state.clear()
-    await message.answer(NOTIFICATIONS_TEXT, reply_markup=notifications_keyboard())
+    settings = await db.get_user_settings(message.from_user.id)
+    await message.answer(NOTIFICATIONS_TEXT, reply_markup=interval_keyboard(settings["interval_minutes"]))
 
 
 @router.message(F.text == MAIN_REPLY_BUTTONS["support"])
@@ -350,7 +374,7 @@ async def choose_currency(callback: CallbackQuery) -> None:
 async def show_interval_menu(callback: CallbackQuery, state: FSMContext) -> None:
     await state.clear()
     settings = await db.get_user_settings(callback.from_user.id)
-    await safe_edit(callback, INTERVAL_TEXT, reply_markup=interval_keyboard(settings["interval_minutes"]))
+    await safe_edit(callback, NOTIFICATIONS_TEXT, reply_markup=interval_keyboard(settings["interval_minutes"]))
     await callback.answer()
 
 
@@ -363,13 +387,19 @@ async def choose_interval(callback: CallbackQuery) -> None:
         minutes = 5
     await db.set_interval(callback.from_user.id, minutes)
     settings = await db.get_user_settings(callback.from_user.id)
-    await safe_edit(callback, INTERVAL_TEXT, reply_markup=interval_keyboard(settings["interval_minutes"]))
-    await callback.answer("Интервал обновлен")
+    await safe_edit(callback, NOTIFICATIONS_TEXT, reply_markup=interval_keyboard(settings["interval_minutes"]))
+    await callback.answer("Уведомления включены")
 
 
 @router.callback_query(F.data == "prices:now")
 async def show_prices_now(callback: CallbackQuery, state: FSMContext) -> None:
     await state.clear()
+    cooldown_seconds = await check_manual_price_cooldown(callback.from_user.id)
+    if cooldown_seconds > 0:
+        await safe_edit(callback, PRICE_COOLDOWN_TEXT.format(seconds=cooldown_seconds), reply_markup=back_keyboard())
+        await callback.answer()
+        return
+
     coin_ids = await db.get_user_coins(callback.from_user.id)
     if not coin_ids:
         await safe_edit(callback, NO_COINS_TEXT, reply_markup=back_keyboard())
@@ -385,6 +415,7 @@ async def show_prices_now(callback: CallbackQuery, state: FSMContext) -> None:
         await callback.answer()
         return
 
+    await db.update_last_manual_price_at(callback.from_user.id)
     text = build_prices_message(coin_ids, prices, settings["currency"])
     await safe_edit(callback, text, reply_markup=back_keyboard())
     await callback.answer()

@@ -13,7 +13,7 @@ class Coin:
 AVAILABLE_COINS: tuple[Coin, ...] = (
     Coin("bitcoin", "BTC", "Bitcoin", "₿", 1),
     Coin("ethereum", "ETH", "Ethereum", "♦️", 2),
-    Coin("the-open-network", "TON", "Toncoin", "🔵", 3),
+    Coin("the-open-network", "TON", "Gram", "🔵", 3),
     Coin("tether", "USDT", "Tether", "💵", 4),
     Coin("binancecoin", "BNB", "BNB", "🟡", 5),
     Coin("solana", "SOL", "Solana", "🟣", 6),
