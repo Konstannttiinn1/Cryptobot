@@ -40,7 +40,7 @@ INTERVAL_TEXT = "⏱ Как часто присылать уведомления
 NOTIFICATIONS_TEXT = "⏱ Выберите интервал уведомлений. После выбора интервала уведомления включатся автоматически."
 NO_COINS_TEXT = "Вы пока не выбрали монеты. Откройте раздел «Выбрать монеты»."
 API_ERROR_TEXT = "Не удалось получить курс. Попробуйте позже."
-SEARCH_PROMPT_TEXT = "Введите название или тикер монеты. Например: BTC, TON, Ethereum"
+SEARCH_PROMPT_TEXT = "Введите название или тикер монеты. Например: BTC, GRAM, Ethereum"
 SEARCH_RESULTS_TEXT = "🔎 Результаты поиска:"
 SEARCH_NOT_FOUND_TEXT = "Ничего не найдено. Попробуйте другой тикер или название."
 MAX_SELECTED_COINS_ALERT = "Можно выбрать максимум {limit} монет."
@@ -83,6 +83,7 @@ def search_available_coins(query: str) -> list[Coin]:
         if normalized_query in coin.symbol.casefold()
         or normalized_query in coin.name.casefold()
         or normalized_query in coin.coin_id.casefold()
+        or any(normalized_query in alias.casefold() for alias in coin.aliases)
     ]
 
 

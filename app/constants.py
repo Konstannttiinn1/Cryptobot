@@ -8,12 +8,13 @@ class Coin:
     name: str
     emoji: str = "🪙"
     market_cap_rank: int = 0
+    aliases: tuple[str, ...] = ()
 
 
 AVAILABLE_COINS: tuple[Coin, ...] = (
     Coin("bitcoin", "BTC", "Bitcoin", "₿", 1),
     Coin("ethereum", "ETH", "Ethereum", "♦️", 2),
-    Coin("the-open-network", "TON", "Gram", "🔵", 3),
+    Coin("the-open-network", "GRAM", "Gram", "🔵", 3, ("TON", "Toncoin", "GRAM", "Gram")),
     Coin("tether", "USDT", "Tether", "💵", 4),
     Coin("binancecoin", "BNB", "BNB", "🟡", 5),
     Coin("solana", "SOL", "Solana", "🟣", 6),

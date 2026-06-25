@@ -80,7 +80,7 @@ python -m app.main
 ## Доступные монеты
 
 - BTC — Bitcoin
-- TON — Gram
+- GRAM — Gram
 - ETH — Ethereum
 - SOL — Solana
 - BNB — BNB
@@ -90,7 +90,7 @@ python -m app.main
 - USDT — Tether
 - NOT — Notcoin
 
-Для нового пользователя по умолчанию выбраны BTC, TON и USDT, валюта — RUB, интервал — 5 минут.
+Для нового пользователя по умолчанию выбраны BTC, GRAM и USDT, валюта — RUB, интервал — 5 минут.
 
 ## Выбор монет
 
@@ -104,7 +104,7 @@ python -m app.main
 📊 Курс сейчас
 
 ₿ BTC: 9 420 000 ₽ | +1.8% за 24ч
-🔵 TON: 305.20 ₽ | -0.6% за 24ч
+🔵 GRAM: 305.20 ₽ | -0.6% за 24ч
 💵 USDT: 89.40 ₽ | +0.01% за 24ч
 
 Валюта: RUB
