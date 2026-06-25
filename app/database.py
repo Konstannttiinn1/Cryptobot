@@ -30,6 +30,7 @@ async def init_db() -> None:
                 interval_minutes INTEGER DEFAULT 5,
                 notifications_enabled INTEGER DEFAULT 0,
                 last_sent_at TEXT NULL,
+                last_manual_price_at TEXT NULL,
                 created_at TEXT,
                 updated_at TEXT
             )
@@ -58,6 +59,10 @@ async def init_db() -> None:
             )
             """
         )
+        cursor = await db.execute("PRAGMA table_info(users)")
+        columns = {row[1] for row in await cursor.fetchall()}
+        if "last_manual_price_at" not in columns:
+            await db.execute("ALTER TABLE users ADD COLUMN last_manual_price_at TEXT NULL")
         await db.commit()
 
 
@@ -151,7 +156,7 @@ async def set_interval(user_id: int, minutes: int) -> None:
         return
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute(
-            "UPDATE users SET interval_minutes = ?, updated_at = ? WHERE user_id = ?",
+            "UPDATE users SET interval_minutes = ?, notifications_enabled = 1, updated_at = ? WHERE user_id = ?",
             (minutes, utc_now_iso(), user_id),
         )
         await db.commit()
@@ -163,6 +168,15 @@ async def set_notifications_enabled(user_id: int, enabled: bool) -> None:
         await db.execute(
             "UPDATE users SET notifications_enabled = ?, updated_at = ? WHERE user_id = ?",
             (1 if enabled else 0, utc_now_iso(), user_id),
+        )
+        await db.commit()
+
+
+async def update_last_manual_price_at(user_id: int) -> None:
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "UPDATE users SET last_manual_price_at = ?, updated_at = ? WHERE user_id = ?",
+            (utc_now_iso(), utc_now_iso(), user_id),
         )
         await db.commit()
 

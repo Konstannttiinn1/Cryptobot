@@ -34,7 +34,8 @@ async def main() -> None:
             BotCommand(command="price", description="Курс сейчас"),
             BotCommand(command="coins", description="Выбрать монеты"),
             BotCommand(command="settings", description="Настройки"),
-            BotCommand(command="stop", description="Остановить уведомления"),
+            BotCommand(command="stop", description="Отключить уведомления"),
+            BotCommand(command="hide", description="Скрыть клавиатуру"),
         ]
     )
 
