@@ -63,6 +63,26 @@ async def init_db() -> None:
         columns = {row[1] for row in await cursor.fetchall()}
         if "last_manual_price_at" not in columns:
             await db.execute("ALTER TABLE users ADD COLUMN last_manual_price_at TEXT NULL")
+
+        await db.execute(
+            """
+            UPDATE user_coins
+            SET symbol = 'GRAM'
+            WHERE coin_id = 'the-open-network'
+               OR symbol = 'TON'
+            """
+        )
+        cursor = await db.execute(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'available_coins'"
+        )
+        if await cursor.fetchone():
+            await db.execute(
+                """
+                UPDATE available_coins
+                SET symbol = 'GRAM', name = 'Gram'
+                WHERE coin_id = 'the-open-network'
+                """
+            )
         await db.commit()
 
 
